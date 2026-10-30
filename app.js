@@ -18,7 +18,7 @@
     duty: {},          // { "YYYY-MM-DD": [格子索引] }
     shifts: DEFAULT_SHIFTS.slice(),
     records: null,     // 不保存
-    checkedDays: new Set(),
+    brush: null,       // null、班型索引，或 'rest'（休）
   };
 
   function load() {
@@ -63,11 +63,14 @@
   // ---------- 網格 ----------
   const grid = $('grid');
   let cellEls = {}; // key -> [td...]
+  let rowEls = {};  // day -> tr
 
   function buildGrid() {
     const range = G.monthRange(state.year, state.month);
     grid.innerHTML = '';
     cellEls = {};
+    rowEls = {};
+    grid.classList.toggle('brushing', state.brush !== null);
     const thead = document.createElement('thead');
     const hr = document.createElement('tr');
     const corner = document.createElement('th');
@@ -88,21 +91,11 @@
       const key = G.dayKey(state.year, state.month, d);
       const wd = new Date(Date.UTC(state.year, state.month - 1, d)).getUTCDay();
       const tr = document.createElement('tr');
+      tr.dataset.day = d;
       if (wd === 0 || wd === 6) tr.classList.add('weekend');
-      if (state.checkedDays.has(key)) tr.classList.add('checked');
       const th = document.createElement('th');
       th.className = 'daycol';
-      const label = document.createElement('label');
-      const cb = document.createElement('input');
-      cb.type = 'checkbox';
-      cb.checked = state.checkedDays.has(key);
-      cb.addEventListener('change', () => {
-        if (cb.checked) state.checkedDays.add(key); else state.checkedDays.delete(key);
-        tr.classList.toggle('checked', cb.checked);
-      });
-      label.appendChild(cb);
-      label.appendChild(document.createTextNode(state.month + '/' + d + '（' + WEEK[wd] + '）'));
-      th.appendChild(label);
+      th.textContent = state.month + '/' + d + '（' + WEEK[wd] + '）';
       tr.appendChild(th);
       const tds = [];
       for (let h = 0; h < 24; h++) {
@@ -114,6 +107,7 @@
         tds.push(td);
       }
       cellEls[key] = tds;
+      rowEls[d] = tr;
       tbody.appendChild(tr);
     }
     grid.appendChild(tbody);
@@ -138,8 +132,47 @@
     const cls = drag.on ? 'preview-on' : 'preview-off';
     eachInRect((d, h) => cellEls[G.dayKey(state.year, state.month, d)][h].classList.add(cls));
   }
+  // ---------- 刷子 ----------
+  let brushDrag = null; // { d0, d1 }
+  function dayFromEvent(e) {
+    const tr = e.target.closest && e.target.closest('tbody tr');
+    return tr ? +tr.dataset.day : null;
+  }
+  function drawBrushPreview() {
+    Object.values(rowEls).forEach(tr => tr.classList.remove('brush-preview'));
+    if (!brushDrag) return;
+    const a = Math.min(brushDrag.d0, brushDrag.d1), b = Math.max(brushDrag.d0, brushDrag.d1);
+    for (let d = a; d <= b; d++) rowEls[d].classList.add('brush-preview');
+  }
+  function brushHours() {
+    if (state.brush === 'rest') return [];
+    const s = state.shifts[state.brush];
+    return G.shiftHours(s.start, s.end);
+  }
+  function brushName() {
+    return state.brush === 'rest' ? '休' : state.shifts[state.brush].name;
+  }
+  function setBrush(b) {
+    state.brush = (state.brush === b) ? null : b;
+    grid.classList.toggle('brushing', state.brush !== null);
+    renderShifts();
+    if (state.brush === null) showMsg('toolbarMsg', '已放下刷子，格子可以拖曳框選。');
+    else showMsg('toolbarMsg', '拿著「' + brushName() + '」刷子：點日期那一列套用，按住往下拖可刷多天。再點一次或按 Esc 放下。');
+  }
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && state.brush !== null) setBrush(state.brush);
+  });
+
   grid.addEventListener('mousedown', (e) => {
     if (e.button !== 0) return;
+    if (state.brush !== null) {
+      const d = dayFromEvent(e);
+      if (!d) return;
+      e.preventDefault();
+      brushDrag = { d0: d, d1: d };
+      drawBrushPreview();
+      return;
+    }
     const c = cellFromEvent(e);
     if (!c) return;
     e.preventDefault();
@@ -148,6 +181,11 @@
     drawPreview();
   });
   grid.addEventListener('mouseover', (e) => {
+    if (brushDrag) {
+      const d = dayFromEvent(e);
+      if (d && d !== brushDrag.d1) { brushDrag.d1 = d; drawBrushPreview(); }
+      return;
+    }
     if (!drag) return;
     const c = cellFromEvent(e);
     if (!c || (c.d === drag.d1 && c.h === drag.h1)) return;
@@ -155,6 +193,19 @@
     drawPreview();
   });
   window.addEventListener('mouseup', () => {
+    if (brushDrag) {
+      const a = Math.min(brushDrag.d0, brushDrag.d1), b = Math.max(brushDrag.d0, brushDrag.d1);
+      const hours = brushHours();
+      for (let d = a; d <= b; d++) setHours(G.dayKey(state.year, state.month, d), new Set(hours));
+      const n = b - a + 1;
+      showMsg('toolbarMsg', (n > 1 ? state.month + '/' + a + '–' + state.month + '/' + b + ' 共 ' + n + ' 天' : state.month + '/' + a)
+        + ' 已設為「' + brushName() + '」。再點一次刷子或按 Esc 放下。');
+      brushDrag = null;
+      drawBrushPreview();
+      save();
+      render();
+      return;
+    }
     if (!drag) return;
     const touched = {};
     eachInRect((d, h) => {
@@ -180,7 +231,9 @@
       const b = document.createElement('button');
       b.type = 'button';
       b.textContent = text;
-      b.addEventListener('click', () => applyShift(s));
+      if (state.brush === i) b.classList.add('active');
+      b.setAttribute('aria-pressed', state.brush === i);
+      b.addEventListener('click', () => setBrush(i));
       box.appendChild(b);
 
       const li = document.createElement('li');
@@ -190,6 +243,9 @@
       del.className = 'ghost';
       del.textContent = '刪除';
       del.addEventListener('click', () => {
+        if (state.brush === i) state.brush = null;
+        else if (typeof state.brush === 'number' && state.brush > i) state.brush--;
+        grid.classList.toggle('brushing', state.brush !== null);
         state.shifts.splice(i, 1);
         save();
         renderShifts();
@@ -197,21 +253,14 @@
       li.appendChild(del);
       list.appendChild(li);
     });
-  }
-  function applyShift(s) {
-    if (!state.checkedDays.size) {
-      showMsg('toolbarMsg', '請先勾選左側要套用的日期。', true);
-      return;
-    }
-    const hours = G.shiftHours(s.start, s.end);
-    for (const key of state.checkedDays) {
-      const set = getHours(key);
-      hours.forEach(h => set.add(h));
-      setHours(key, set);
-    }
-    showMsg('toolbarMsg', '已將「' + s.name + '」套用到 ' + state.checkedDays.size + ' 天。');
-    save();
-    render();
+    const rest = document.createElement('button');
+    rest.type = 'button';
+    rest.className = 'rest' + (state.brush === 'rest' ? ' active' : '');
+    rest.setAttribute('aria-pressed', state.brush === 'rest');
+    rest.textContent = '休';
+    rest.title = '清空那天的排勤';
+    rest.addEventListener('click', () => setBrush('rest'));
+    box.appendChild(rest);
   }
   function fillHourSelect(sel, def) {
     for (let h = 0; h < 24; h++) {
@@ -233,31 +282,12 @@
     showMsg('toolbarMsg', '已新增班型「' + name + '」。');
   });
 
-  $('clearDays').addEventListener('click', () => {
-    if (!state.checkedDays.size) { showMsg('toolbarMsg', '請先勾選左側要清空的日期。', true); return; }
-    for (const key of state.checkedDays) delete state.duty[key];
-    showMsg('toolbarMsg', '已清空 ' + state.checkedDays.size + ' 天的排勤。');
-    save();
-    render();
-  });
-  $('toggleAllDays').addEventListener('click', () => {
-    const range = G.monthRange(state.year, state.month);
-    const keys = [];
-    for (let d = 1; d <= range.days; d++) keys.push(G.dayKey(state.year, state.month, d));
-    const allChecked = keys.every(k => state.checkedDays.has(k));
-    state.checkedDays = allChecked ? new Set() : new Set(keys);
-    buildGrid();
-    render();
-  });
-
   // ---------- 月份 ----------
   function changeMonth(delta) {
     let m = state.month + delta, y = state.year;
     if (m < 1) { m = 12; y--; }
     if (m > 12) { m = 1; y++; }
     state.year = y; state.month = m;
-    state.checkedDays = new Set();
-    showMsg('toolbarMsg', '');
     buildGrid();
     render();
   }
