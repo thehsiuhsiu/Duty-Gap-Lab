@@ -14,3 +14,5 @@
 - `app.js`：畫面
 - 測試：`node tests/core.test.js`
 - 用語見 `GLOSSARY.md`，決策見 `docs/adr/`
+
+> 改了 `style.css`、`core.js`、`app.js` 時，要把 `index.html` 裡的 `?v=` 數字加一，避免瀏覽器用到舊的快取檔案。
