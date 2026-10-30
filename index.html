@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Duty-Gap 漏打工作紀錄檢查</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+  <h1>Duty-Gap <span>漏打工作紀錄檢查</span></h1>
+  <div class="month-nav">
+    <button id="prevMonth" type="button" aria-label="上個月">‹</button>
+    <strong id="monthLabel"></strong>
+    <button id="nextMonth" type="button" aria-label="下個月">›</button>
+  </div>
+</header>
+
+<main>
+  <section class="panel">
+    <h2>① 點選排勤時段</h2>
+    <p class="hint">在格子上按住拖曳可框選（從空格開始＝勾選，從已勾格開始＝取消）。勾選左側日期後按班型，可一次套到多天（疊加）。一天＝勤務日 08:00 到隔天 08:00。</p>
+    <div class="toolbar">
+      <span class="label">班型：</span>
+      <span id="shiftButtons"></span>
+      <button id="clearDays" type="button" class="ghost">清空勾選的天</button>
+      <button id="toggleAllDays" type="button" class="ghost">全選／取消勾選</button>
+      <details class="shift-editor">
+        <summary>管理班型</summary>
+        <div class="shift-form">
+          <input id="shiftName" type="text" placeholder="名稱，例如 早班" maxlength="10">
+          <select id="shiftStart" aria-label="開始"></select>
+          <span>到</span>
+          <select id="shiftEnd" aria-label="結束"></select>
+          <button id="addShift" type="button">新增</button>
+        </div>
+        <ul id="shiftList"></ul>
+      </details>
+    </div>
+    <p id="toolbarMsg" class="msg" role="status"></p>
+    <div class="grid-wrap">
+      <table id="grid"></table>
+    </div>
+    <div class="legend">
+      <span><i class="sw duty"></i>排勤、已有紀錄</span>
+      <span><i class="sw gap"></i>漏打</span>
+      <span><i class="sw partial"></i>部分漏打</span>
+      <span><i class="sw extra"></i>排勤外紀錄（不算錯）</span>
+      <span><i class="sw pending"></i>排勤（尚未貼紀錄）</span>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>② 貼上工作紀錄</h2>
+    <p class="hint">從 Excel 整片選取複製，貼到下面即可（含標題、勤務項目、姓名都沒關係）。紀錄不會保存，重新整理後需重貼。</p>
+    <textarea id="paste" rows="6" placeholder="115/10/24 08:00 ~ 115/10/24 10:00　巡邏_一線巡邏&#10;115/10/24 10:00 ~ 115/10/24 12:00　勤區查察_勤查線"></textarea>
+    <div class="row">
+      <p id="parseMsg" class="msg" role="status"></p>
+      <button id="clearPaste" type="button" class="ghost">清除紀錄</button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>③ 漏打時段</h2>
+    <p id="summary" class="summary"></p>
+    <div id="gapList"></div>
+    <details id="extraBox" class="extra-box">
+      <summary id="extraSummary"></summary>
+      <div id="extraList"></div>
+    </details>
+  </section>
+</main>
+
+<footer>資料只在這個瀏覽器內處理，不會上傳。瀏覽器只記住排勤時段與班型。</footer>
+
+<script src="core.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
