@@ -326,6 +326,36 @@
     render();
   });
 
+  // ---------- 全部清除（按兩次確認） ----------
+  const clearAllBtn = $('clearAll');
+  let armTimer = null;
+  function disarm() {
+    clearTimeout(armTimer);
+    armTimer = null;
+    clearAllBtn.classList.remove('armed');
+    clearAllBtn.textContent = '全部清除';
+  }
+  clearAllBtn.addEventListener('click', () => {
+    if (!armTimer) {
+      clearAllBtn.classList.add('armed');
+      clearAllBtn.textContent = '再按一次確認清除';
+      armTimer = setTimeout(disarm, 4000);
+      return;
+    }
+    disarm();
+    $('attPaste').value = '';
+    $('paste').value = '';
+    state.attendance = null;
+    state.records = null;
+    parsed = null;
+    const prefix = state.year + '-' + pad(state.month) + '-';
+    Object.keys(state.duty).forEach((k) => { if (k.startsWith(prefix)) delete state.duty[k]; });
+    if (state.brush !== null) { state.brush = null; grid.classList.remove('brushing'); renderShifts(); }
+    save();
+    render();
+    showMsg('toolbarMsg', '已清除出勤紀錄、工作紀錄與 ' + state.month + ' 月的手動排勤（班型保留）。');
+  });
+
   // ---------- 繪製 ----------
   let lastResult = null;
   function render() {
