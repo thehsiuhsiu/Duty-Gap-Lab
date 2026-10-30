@@ -22,22 +22,12 @@
     attendance: null,  // { events, segments, open }，不保存
   };
 
-  function load() {
-    try {
-      const raw = localStorage.getItem(STORE_KEY);
-      if (!raw) return;
-      const data = JSON.parse(raw);
-      if (data && typeof data.duty === 'object') state.duty = data.duty;
-      if (data && Array.isArray(data.shifts)) state.shifts = data.shifts;
-    } catch (e) { /* 讀不到就用預設 */ }
+  // 不保存任何資料：關閉或重新整理網頁就清空。
+  // 舊版曾把排勤與班型存在瀏覽器，這裡順手刪掉，避免留在電腦上。
+  function purgeOldStorage() {
+    try { localStorage.removeItem(STORE_KEY); } catch (e) { /* 無法存取就算了 */ }
   }
-  function save() {
-    try {
-      localStorage.setItem(STORE_KEY, JSON.stringify({ duty: state.duty, shifts: state.shifts }));
-    } catch (e) {
-      showMsg('toolbarMsg', '無法存到瀏覽器，關掉網頁後排勤會消失。', true);
-    }
-  }
+  function save() { /* 刻意不保存 */ }
 
   // ---------- 小工具 ----------
   const $ = (id) => document.getElementById(id);
@@ -353,7 +343,7 @@
     if (state.brush !== null) { state.brush = null; grid.classList.remove('brushing'); renderShifts(); }
     save();
     render();
-    showMsg('toolbarMsg', '已清除出勤紀錄、工作紀錄與 ' + state.month + ' 月的手動排勤（班型保留）。');
+    showMsg('toolbarMsg', '已清除出勤紀錄、工作紀錄與 ' + state.month + ' 月的手動排勤（班型保留到關閉網頁為止）。');
   });
 
   // ---------- 繪製 ----------
@@ -495,7 +485,7 @@
   });
 
   // ---------- 啟動 ----------
-  load();
+  purgeOldStorage();
   renderShifts();
   buildGrid();
   render();

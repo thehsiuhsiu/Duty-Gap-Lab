@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&amp;display=swap">
-<link rel="stylesheet" href="style.css?v=6">
+<link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
 <aside class="nav">
@@ -36,7 +36,7 @@
 
   <div class="nav-footer">
     <button id="clearAll" type="button" class="nav-item danger" title="清除出勤紀錄、工作紀錄與本月手動排勤">全部清除</button>
-    <p>資料只在這個瀏覽器內處理，不會上傳。瀏覽器只記住手動排勤與班型。</p>
+    <p>資料只在這個網頁內處理，不會上傳也不會保存；關閉或重新整理網頁就全部清除。</p>
   </div>
 </aside>
 
@@ -44,7 +44,7 @@
   <section class="card" id="step1">
     <h2><span class="step-no">1</span>排勤時段</h2>
     <div class="att">
-      <p class="hint"><b>建議：貼上出勤紀錄。</b>從系統的出勤紀錄 Excel 整片複製貼上（新到舊、含標題都可以），會自動填好排勤時段，漏打時也會標出是哪一個勤務。出勤紀錄不會保存。</p>
+      <p class="hint"><b>建議：貼上出勤紀錄。</b>從系統的出勤紀錄 Excel 整片複製貼上（新到舊、含標題都可以），會自動填好排勤時段，漏打時也會標出是哪一個勤務。</p>
       <textarea id="attPaste" rows="4" placeholder="115/10/01 10:00&#9;出勤&#9;值班_值班&#10;115/10/01 08:00&#9;出勤&#9;備勤_備勤"></textarea>
       <div class="row">
         <p id="attMsg" class="msg" role="status"></p>
@@ -84,7 +84,7 @@
 
   <section class="card" id="step2">
     <h2><span class="step-no">2</span>貼上工作紀錄</h2>
-    <p class="hint">從 Excel 整片選取複製，貼到下面即可（含標題、勤務項目、姓名都沒關係）。紀錄不會保存，重新整理後需重貼。</p>
+    <p class="hint">從 Excel 整片選取複製，貼到下面即可（含標題、勤務項目、姓名都沒關係）。</p>
     <textarea id="paste" rows="6" placeholder="115/10/24 08:00 ~ 115/10/24 10:00　巡邏_一線巡邏&#10;115/10/24 10:00 ~ 115/10/24 12:00　勤區查察_勤查線"></textarea>
     <div class="row">
       <p id="parseMsg" class="msg" role="status"></p>
@@ -106,8 +106,8 @@
   </section>
 </main>
 
-<script src="core.js?v=6"></script>
-<script src="xlsx.js?v=6"></script>
-<script src="app.js?v=6"></script>
+<script src="core.js?v=7"></script>
+<script src="xlsx.js?v=7"></script>
+<script src="app.js?v=7"></script>
 </body>
 </html>
