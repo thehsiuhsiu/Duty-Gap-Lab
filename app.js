@@ -310,9 +310,12 @@
   });
 
   // ---------- 繪製 ----------
+  let lastResult = null;
   function render() {
     $('monthLabel').textContent = roc(state.year) + ' 年 ' + state.month + ' 月';
     const r = G.analyze(state.year, state.month, state.duty, state.records);
+    lastResult = r;
+    $('exportXlsx').hidden = !(state.records && r.gaps.length);
 
     for (const key in cellEls) {
       const row = r.cells[key];
@@ -391,6 +394,39 @@
       container.appendChild(div);
     }
   }
+
+  // ---------- 匯出 Excel ----------
+  function fmtRoc(t) {
+    const f = G.fromMinutes(t);
+    return roc(f.y) + '/' + pad(f.m) + '/' + pad(f.d) + ' ' + pad(f.hh) + ':' + pad(f.mm);
+  }
+  $('exportXlsx').addEventListener('click', () => {
+    const r = lastResult;
+    if (!r || !r.gaps.length) return;
+    const rows = r.gaps.map((g) => {
+      const wd = new Date(Date.UTC(state.year, state.month - 1, g.day)).getUTCDay();
+      return [
+        roc(state.year) + '/' + pad(state.month) + '/' + pad(g.day) + '（' + WEEK[wd] + '）',
+        fmtRoc(g.start) + ' ~ ' + fmtRoc(g.end),
+        fmtDur(g.end - g.start),
+      ];
+    });
+    rows.push(['合計 ' + r.gaps.length + ' 段', '', fmtDur(r.gapMinutes)]);
+    const bytes = window.MiniXlsx.buildXlsx({
+      sheetName: '漏打時段',
+      columns: [{ header: '勤務日', width: 18 }, { header: '漏打時段', width: 38 }, { header: '時長', width: 16 }],
+      rows,
+      boldLastRow: true,
+    });
+    const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = '漏打時段_' + roc(state.year) + '年' + state.month + '月.xlsx';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
 
   // ---------- 啟動 ----------
   load();
