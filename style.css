@@ -100,3 +100,7 @@ textarea { width: 100%; font: 14px/1.5 Consolas, "Microsoft JhengHei", monospace
 .extra-box { margin-top: 12px; color: var(--muted); }
 .extra-box summary { cursor: pointer; }
 footer { text-align: center; color: var(--muted); font-size: 13px; padding: 8px 0 24px; }
+.att { border-bottom: 1px dashed var(--line); padding-bottom: 8px; margin-bottom: 10px; }
+.att .hint b, #manualBox .hint b { color: var(--ink); }
+#grid.readonly td.c { cursor: default; }
+.item { margin-left: 10px; color: var(--ink); font-family: "Microsoft JhengHei", "PingFang TC", sans-serif; background: #eef0e2; border-radius: 4px; padding: 0 6px; }

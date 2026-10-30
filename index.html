@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Duty-Gap 漏打工作紀錄檢查</title>
-<link rel="stylesheet" href="style.css?v=3">
+<link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
 <header class="topbar">
@@ -18,8 +18,17 @@
 
 <main>
   <section class="panel">
-    <h2>① 點選排勤時段</h2>
-    <p class="hint">先點上方班型拿起刷子，再點日期那一列（按住往下拖可一次刷好幾天），整天會換成該班型；再點一次同一班型或按 Esc 放下刷子。沒拿刷子時，在格子上按住拖曳可框選零碎時段（從空格開始＝勾選，從已勾格開始＝取消）。一天＝勤務日 08:00 到隔天 08:00。</p>
+    <h2>① 排勤時段</h2>
+    <div class="att">
+      <p class="hint"><b>建議：貼上出勤紀錄。</b>從系統的出勤紀錄 Excel 整片複製貼上（新到舊、含標題都可以），會自動填好排勤時段，漏打時也會標出是哪一個勤務。出勤紀錄不會保存。</p>
+      <textarea id="attPaste" rows="4" placeholder="115/10/01 10:00&#9;出勤&#9;值班_值班&#10;115/10/01 08:00&#9;出勤&#9;備勤_備勤"></textarea>
+      <div class="row">
+        <p id="attMsg" class="msg" role="status"></p>
+        <button id="clearAtt" type="button" class="ghost">清除出勤紀錄</button>
+      </div>
+    </div>
+    <div id="manualBox">
+    <p class="hint"><b>沒有出勤紀錄時，手動點選：</b>先點上方班型拿起刷子，再點日期那一列（按住往下拖可一次刷好幾天），整天會換成該班型；再點一次同一班型或按 Esc 放下刷子。沒拿刷子時，在格子上按住拖曳可框選零碎時段（從空格開始＝勾選，從已勾格開始＝取消）。一天＝勤務日 08:00 到隔天 08:00。</p>
     <div class="toolbar">
       <span class="label">班型刷子：</span>
       <span id="shiftButtons"></span>
@@ -36,6 +45,7 @@
       </details>
     </div>
     <p id="toolbarMsg" class="msg" role="status"></p>
+    </div>
     <div class="grid-wrap">
       <table id="grid"></table>
     </div>
@@ -74,8 +84,8 @@
 
 <footer>資料只在這個瀏覽器內處理，不會上傳。瀏覽器只記住排勤時段與班型。</footer>
 
-<script src="core.js?v=3"></script>
-<script src="xlsx.js?v=3"></script>
-<script src="app.js?v=3"></script>
+<script src="core.js?v=4"></script>
+<script src="xlsx.js?v=4"></script>
+<script src="app.js?v=4"></script>
 </body>
 </html>

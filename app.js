@@ -19,6 +19,7 @@
     shifts: DEFAULT_SHIFTS.slice(),
     records: null,     // 不保存
     brush: null,       // null、班型索引，或 'rest'（休）
+    attendance: null,  // { events, segments, open }，不保存
   };
 
   function load() {
@@ -164,7 +165,7 @@
   });
 
   grid.addEventListener('mousedown', (e) => {
-    if (e.button !== 0) return;
+    if (e.button !== 0 || state.attendance) return;
     if (state.brush !== null) {
       const d = dayFromEvent(e);
       if (!d) return;
@@ -309,11 +310,39 @@
     render();
   });
 
+  // ---------- 出勤紀錄 ----------
+  $('attPaste').addEventListener('input', () => {
+    const text = $('attPaste').value;
+    if (!text.trim()) { state.attendance = null; render(); return; }
+    const events = G.parseAttendance(text);
+    const { segments, open } = G.attendanceSegments(events);
+    state.attendance = { events, segments, open };
+    if (state.brush !== null) { state.brush = null; grid.classList.remove('brushing'); renderShifts(); }
+    render();
+  });
+  $('clearAtt').addEventListener('click', () => {
+    $('attPaste').value = '';
+    state.attendance = null;
+    render();
+  });
+
   // ---------- 繪製 ----------
   let lastResult = null;
   function render() {
     $('monthLabel').textContent = roc(state.year) + ' 年 ' + state.month + ' 月';
-    const r = G.analyze(state.year, state.month, state.duty, state.records);
+    const range = G.monthRange(state.year, state.month);
+    const att = state.attendance;
+    const dutySegs = att ? att.segments : G.dutyIntervals(range, state.year, state.month, state.duty);
+    const r = G.analyze(state.year, state.month, dutySegs, state.records);
+    $('manualBox').hidden = !!att;
+    grid.classList.toggle('readonly', !!att);
+    if (!att) showMsg('attMsg', '');
+    else if (!att.events.length) showMsg('attMsg', '沒有抓到出勤紀錄，請確認有複製到「115/10/01 08:00　出勤　備勤_備勤」這種格式。', true);
+    else {
+      let t = '抓到 ' + att.events.length + ' 筆出退勤，組成 ' + att.segments.length + ' 段勤務，本月 ' + r.dutySegCount + ' 段';
+      if (att.open) t += '；' + att.open + ' 筆出勤之後沒有下一筆，無法得知結束時間，未計入';
+      showMsg('attMsg', t + '。目前依出勤紀錄比對，手動排勤暫停使用。', r.dutySegCount === 0);
+    }
     lastResult = r;
     $('exportXlsx').hidden = !(state.records && r.gaps.length);
 
@@ -339,14 +368,14 @@
     }
 
     // 結果
-    const dutyCount = Object.keys(state.duty).filter(k => k.startsWith(state.year + '-' + pad(state.month) + '-')).length;
+    const dutyCount = r.dutySegCount;
     const summary = $('summary');
     const list = $('gapList');
     list.innerHTML = '';
     if (!dutyCount) {
-      summary.textContent = '這個月還沒點選排勤時段。';
+      summary.textContent = att ? '出勤紀錄裡沒有這個月的勤務，請確認月份。' : '這個月還沒有排勤時段，請貼上出勤紀錄或手動點選。';
     } else if (!state.records) {
-      summary.textContent = '已點選 ' + dutyCount + ' 天排勤，貼上工作紀錄後就會開始比對。';
+      summary.textContent = '已有 ' + dutyCount + ' 段排勤，貼上工作紀錄後就會開始比對。';
     } else if (!r.gaps.length) {
       summary.innerHTML = '這個月的排勤時段都有工作紀錄，沒有漏打。';
     } else {
@@ -388,6 +417,12 @@
         span.className = 'dur';
         span.textContent = fmtDur(g.end - g.start);
         li.appendChild(span);
+        if (g.item) {
+          const it = document.createElement('span');
+          it.className = 'item';
+          it.textContent = g.item;
+          li.appendChild(it);
+        }
         ul.appendChild(li);
       }
       div.appendChild(ul);
@@ -408,13 +443,14 @@
       return [
         roc(state.year) + '/' + pad(state.month) + '/' + pad(g.day) + '（' + WEEK[wd] + '）',
         fmtRoc(g.start) + ' ~ ' + fmtRoc(g.end),
+        g.item,
         fmtDur(g.end - g.start),
       ];
     });
-    rows.push(['合計 ' + r.gaps.length + ' 段', '', fmtDur(r.gapMinutes)]);
+    rows.push(['合計 ' + r.gaps.length + ' 段', '', '', fmtDur(r.gapMinutes)]);
     const bytes = window.MiniXlsx.buildXlsx({
       sheetName: '漏打時段',
-      columns: [{ header: '勤務日', width: 18 }, { header: '漏打時段', width: 38 }, { header: '時長', width: 16 }],
+      columns: [{ header: '勤務日', width: 18 }, { header: '漏打時段', width: 38 }, { header: '勤務項目', width: 18 }, { header: '時長', width: 16 }],
       rows,
       boldLastRow: true,
     });

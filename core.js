@@ -102,7 +102,7 @@
     return out;
   }
 
-  // 把勾選的格子轉成區間（相鄰格合併）
+  // 把勾選的格子轉成排勤區段（相鄰格合併，沒有勤務項目）
   function dutyIntervals(range, year, month, duty) {
     const list = [];
     for (let d = 1; d <= range.days; d++) {
@@ -113,11 +113,44 @@
         list.push({ start: s, end: s + 60 });
       }
     }
-    return mergeIntervals(list);
+    return mergeIntervals(list).map(r => ({ start: r.start, end: r.end, item: '' }));
   }
 
-  // 主計算。duty: { "YYYY-MM-DD": [格子索引...] }；records: [{start,end}] 或 null（尚未貼）
-  function analyze(year, month, duty, records) {
+  // 解析出勤紀錄：每列「日期 時間｜出勤或退勤｜勤務項目」，順序不拘（新到舊也可以）
+  const ATT_RE = /(\d{2,4})\s*[\/\-.]\s*(\d{1,2})\s*[\/\-.]\s*(\d{1,2})\s+(\d{1,2})\s*[:：]\s*(\d{2})[ \t]*(出勤|退勤)[ \t]*([^\t\r\n]*)/g;
+  function parseAttendance(text) {
+    const events = [];
+    let m;
+    ATT_RE.lastIndex = 0;
+    while ((m = ATT_RE.exec(text)) !== null) {
+      events.push({
+        t: toMinutes(rocToYear(m[1]), +m[2], +m[3], +m[4], +m[5]),
+        type: m[6] === '出勤' ? 'in' : 'out',
+        item: m[7].trim(),
+      });
+    }
+    return events;
+  }
+
+  // 出勤紀錄 → 排勤區段。每筆「出勤」開始一段，到下一個較晚的出勤或退勤為止；
+  // 勤務項目一律取「出勤」那一列（退勤列的項目在系統匯出時會錯開，不採用）。
+  function attendanceSegments(events) {
+    const times = [...new Set(events.map(e => e.t))].sort((a, b) => a - b);
+    const segs = [];
+    let open = 0;
+    const seen = new Set();
+    for (const e of events.filter(e => e.type === 'in').sort((a, b) => a.t - b.t)) {
+      if (seen.has(e.t)) continue; // 同一時間重複出勤只算一次
+      seen.add(e.t);
+      const next = times.find(t => t > e.t);
+      if (next === undefined) { open++; continue; }
+      segs.push({ start: e.t, end: next, item: e.item });
+    }
+    return { segments: segs, open };
+  }
+
+  // 主計算。dutySegs: [{start,end,item}]；records: [{start,end}] 或 null（尚未貼）
+  function analyze(year, month, dutySegs, records) {
     const range = monthRange(year, month);
     const hasRecords = Array.isArray(records);
     const inMonth = hasRecords
@@ -126,37 +159,48 @@
     const merged = mergeIntervals(inMonth.map(r => ({
       start: Math.max(r.start, range.start), end: Math.min(r.end, range.end),
     })));
-    const dutyMerged = dutyIntervals(range, year, month, duty);
+    const segs = dutySegs
+      .filter(r => r.end > range.start && r.start < range.end)
+      .map(r => ({ start: Math.max(r.start, range.start), end: Math.min(r.end, range.end), item: r.item || '' }))
+      .sort((a, b) => a.start - b.start);
+    const dutyMerged = mergeIntervals(segs);
 
-    // 每格狀態
-    const cells = {};
-    for (let d = 1; d <= range.days; d++) {
-      const key = dayKey(year, month, d);
-      const set = new Set(duty[key] || []);
-      const row = [];
-      for (let h = 0; h < 24; h++) {
-        const s = slotStart(range, d, h);
-        const cov = hasRecords ? coveredMinutes(merged, s, s + 60) : 0;
-        let st = '';
-        if (set.has(h)) {
-          if (!hasRecords) st = 'pending';
-          else if (cov >= 60) st = 'duty';
-          else if (cov === 0) st = 'gap';
-          else st = 'partial';
-        } else if (cov > 0) st = 'extra';
-        row.push(st);
-      }
-      cells[key] = row;
-    }
-
-    // 漏打時段：排勤區間扣掉紀錄
-    const gaps = [];
+    // 漏打時段：每段排勤扣掉紀錄，保留勤務項目；同項目又相接的合併
+    const rawGaps = [];
     if (hasRecords) {
-      for (const di of dutyMerged) gaps.push(...subtract(di.start, di.end, merged));
+      for (const sg of segs) {
+        for (const g of subtract(sg.start, sg.end, merged)) rawGaps.push({ start: g.start, end: g.end, item: sg.item });
+      }
+    }
+    const gaps = [];
+    for (const g of rawGaps.sort((a, b) => a.start - b.start)) {
+      const last = gaps[gaps.length - 1];
+      if (last && last.item === g.item && g.start <= last.end) last.end = Math.max(last.end, g.end);
+      else gaps.push({ ...g });
     }
     // 排勤外紀錄：紀錄扣掉排勤區間
     const extras = [];
     for (const r of merged) extras.push(...subtract(r.start, r.end, dutyMerged));
+
+    // 每格狀態
+    const cells = {};
+    for (let d = 1; d <= range.days; d++) {
+      const row = [];
+      for (let h = 0; h < 24; h++) {
+        const s = slotStart(range, d, h), e = s + 60;
+        const dutyMin = coveredMinutes(dutyMerged, s, e);
+        const gapMin = coveredMinutes(mergeIntervals(gaps), s, e);
+        let st = '';
+        if (dutyMin > 0) {
+          if (!hasRecords) st = 'pending';
+          else if (gapMin === 0) st = 'duty';
+          else if (gapMin >= dutyMin) st = 'gap';
+          else st = 'partial';
+        } else if (hasRecords && coveredMinutes(merged, s, e) > 0) st = 'extra';
+        row.push(st);
+      }
+      cells[dayKey(year, month, d)] = row;
+    }
 
     const splitByDay = (list) => {
       const out = [];
@@ -166,15 +210,12 @@
           const dayIdx = Math.floor((s - range.start) / 1440);
           const dayEnd = range.start + (dayIdx + 1) * 1440;
           const e = Math.min(g.end, dayEnd);
-          out.push({ day: dayIdx + 1, start: s, end: e });
+          out.push({ day: dayIdx + 1, start: s, end: e, item: g.item || '' });
           s = e;
         }
       }
       return out;
     };
-
-    let ignored = 0;
-    if (hasRecords) ignored = records.length - inMonth.length;
 
     let first = null, last = null;
     for (const r of inMonth) {
@@ -188,7 +229,9 @@
       extras: splitByDay(extras),
       gapMinutes: gaps.reduce((a, g) => a + g.end - g.start, 0),
       recordCount: inMonth.length,
-      ignored, first, last,
+      ignored: hasRecords ? records.length - inMonth.length : 0,
+      first, last,
+      dutySegCount: segs.length,
     };
   }
 
@@ -205,6 +248,7 @@
   const api = {
     DAY_START_HOUR, toMinutes, fromMinutes, parseRecords, mergeIntervals,
     monthRange, slotStart, dayKey, analyze, shiftHours, subtract,
+    dutyIntervals, parseAttendance, attendanceSegments,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.DutyGap = api;
