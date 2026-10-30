@@ -19,12 +19,10 @@
 <main>
   <section class="panel">
     <h2>① 點選排勤時段</h2>
-    <p class="hint">在格子上按住拖曳可框選（從空格開始＝勾選，從已勾格開始＝取消）。勾選左側日期後按班型，可一次套到多天（疊加）。一天＝勤務日 08:00 到隔天 08:00。</p>
+    <p class="hint">先點上方班型拿起刷子，再點日期那一列（按住往下拖可一次刷好幾天），整天會換成該班型；再點一次同一班型或按 Esc 放下刷子。沒拿刷子時，在格子上按住拖曳可框選零碎時段（從空格開始＝勾選，從已勾格開始＝取消）。一天＝勤務日 08:00 到隔天 08:00。</p>
     <div class="toolbar">
-      <span class="label">班型：</span>
+      <span class="label">班型刷子：</span>
       <span id="shiftButtons"></span>
-      <button id="clearDays" type="button" class="ghost">清空勾選的天</button>
-      <button id="toggleAllDays" type="button" class="ghost">全選／取消勾選</button>
       <details class="shift-editor">
         <summary>管理班型</summary>
         <div class="shift-form">

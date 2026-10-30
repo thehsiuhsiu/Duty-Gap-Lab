@@ -71,7 +71,13 @@ button.ghost { background: transparent; border-color: var(--line); }
 #grid td.c.extra { background: var(--extra); }
 #grid td.c.preview-on { outline: 2px solid var(--accent); outline-offset: -2px; background: var(--accent-soft); }
 #grid td.c.preview-off { outline: 2px dashed var(--gap); outline-offset: -2px; background: #fff; }
-#grid tr.checked th.daycol { background: #eef0e2; }
+#shiftButtons button.active { background: #5e604a; border-color: #5e604a; color: #fff; box-shadow: 0 0 0 2px var(--accent-soft); }
+#shiftButtons button.rest { background: #fff; }
+#shiftButtons button.rest.active { background: var(--ink); color: #fff; }
+#grid.brushing td.c, #grid.brushing th.daycol { cursor: copy; }
+#grid.brushing tbody tr:hover th.daycol { background: #eef0e2; }
+#grid tr.brush-preview th.daycol { background: var(--accent-soft); }
+#grid tr.brush-preview td.c { outline: 1px solid var(--accent); outline-offset: -1px; }
 
 .legend { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 10px; color: var(--muted); font-size: 13px; }
 .sw { display: inline-block; width: 14px; height: 14px; border-radius: 3px; vertical-align: -2px; margin-right: 4px; }
