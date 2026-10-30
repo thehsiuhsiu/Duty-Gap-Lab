@@ -241,7 +241,7 @@
       li.textContent = text;
       const del = document.createElement('button');
       del.type = 'button';
-      del.className = 'ghost';
+      del.className = 'btn ghost small';
       del.textContent = '刪除';
       del.addEventListener('click', () => {
         if (state.brush === i) state.brush = null;

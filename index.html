@@ -4,35 +4,58 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Duty-Gap 漏打工作紀錄檢查</title>
-<link rel="stylesheet" href="style.css?v=5">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#191919" media="(prefers-color-scheme: dark)">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&amp;display=swap">
+<link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
-<header class="topbar">
-  <h1>Duty-Gap <span>漏打工作紀錄檢查</span></h1>
-  <div class="month-nav">
-    <button id="prevMonth" type="button" aria-label="上個月">‹</button>
-    <strong id="monthLabel"></strong>
-    <button id="nextMonth" type="button" aria-label="下個月">›</button>
+<aside class="nav">
+  <div class="nav-header">
+    <span class="brand-name">Duty-Gap</span>
   </div>
-  <button id="clearAll" type="button" class="danger" title="清除出勤紀錄、工作紀錄與本月手動排勤">全部清除</button>
-</header>
+  <p class="nav-sub">漏打工作紀錄檢查</p>
 
-<main>
-  <section class="panel">
-    <h2>① 排勤時段</h2>
+  <div class="nav-section">
+    <p class="nav-section-title">月份（勤務日 08:00–08:00）</p>
+    <div class="month-nav">
+      <button id="prevMonth" type="button" class="icon-btn" aria-label="上個月">‹</button>
+      <strong id="monthLabel"></strong>
+      <button id="nextMonth" type="button" class="icon-btn" aria-label="下個月">›</button>
+    </div>
+  </div>
+
+  <div class="nav-section">
+    <p class="nav-section-title">步驟</p>
+    <a class="nav-item" href="#step1"><span class="step-no">1</span>排勤時段</a>
+    <a class="nav-item" href="#step2"><span class="step-no">2</span>貼上工作紀錄</a>
+    <a class="nav-item" href="#step3"><span class="step-no">3</span>漏打時段</a>
+  </div>
+
+  <div class="nav-footer">
+    <button id="clearAll" type="button" class="nav-item danger" title="清除出勤紀錄、工作紀錄與本月手動排勤">全部清除</button>
+    <p>資料只在這個瀏覽器內處理，不會上傳。瀏覽器只記住手動排勤與班型。</p>
+  </div>
+</aside>
+
+<main class="main-content">
+  <section class="card" id="step1">
+    <h2><span class="step-no">1</span>排勤時段</h2>
     <div class="att">
       <p class="hint"><b>建議：貼上出勤紀錄。</b>從系統的出勤紀錄 Excel 整片複製貼上（新到舊、含標題都可以），會自動填好排勤時段，漏打時也會標出是哪一個勤務。出勤紀錄不會保存。</p>
       <textarea id="attPaste" rows="4" placeholder="115/10/01 10:00&#9;出勤&#9;值班_值班&#10;115/10/01 08:00&#9;出勤&#9;備勤_備勤"></textarea>
       <div class="row">
         <p id="attMsg" class="msg" role="status"></p>
-        <button id="clearAtt" type="button" class="ghost">清除出勤紀錄</button>
+        <button id="clearAtt" type="button" class="btn ghost">清除出勤紀錄</button>
       </div>
     </div>
     <div id="manualBox">
     <p class="hint"><b>沒有出勤紀錄時，手動點選：</b>先點上方班型拿起刷子，再點日期那一列（按住往下拖可一次刷好幾天），整天會換成該班型；再點一次同一班型或按 Esc 放下刷子。沒拿刷子時，在格子上按住拖曳可框選零碎時段（從空格開始＝勾選，從已勾格開始＝取消）。一天＝勤務日 08:00 到隔天 08:00。</p>
     <div class="toolbar">
-      <span class="label">班型刷子：</span>
-      <span id="shiftButtons"></span>
+      <span class="label">班型刷子</span>
+      <span id="shiftButtons" class="segmented"></span>
       <details class="shift-editor">
         <summary>管理班型</summary>
         <div class="shift-form">
@@ -40,7 +63,7 @@
           <select id="shiftStart" aria-label="開始"></select>
           <span>到</span>
           <select id="shiftEnd" aria-label="結束"></select>
-          <button id="addShift" type="button">新增</button>
+          <button id="addShift" type="button" class="btn">新增</button>
         </div>
         <ul id="shiftList"></ul>
       </details>
@@ -59,21 +82,21 @@
     </div>
   </section>
 
-  <section class="panel">
-    <h2>② 貼上工作紀錄</h2>
+  <section class="card" id="step2">
+    <h2><span class="step-no">2</span>貼上工作紀錄</h2>
     <p class="hint">從 Excel 整片選取複製，貼到下面即可（含標題、勤務項目、姓名都沒關係）。紀錄不會保存，重新整理後需重貼。</p>
     <textarea id="paste" rows="6" placeholder="115/10/24 08:00 ~ 115/10/24 10:00　巡邏_一線巡邏&#10;115/10/24 10:00 ~ 115/10/24 12:00　勤區查察_勤查線"></textarea>
     <div class="row">
       <p id="parseMsg" class="msg" role="status"></p>
-      <button id="clearPaste" type="button" class="ghost">清除紀錄</button>
+      <button id="clearPaste" type="button" class="btn ghost">清除紀錄</button>
     </div>
   </section>
 
-  <section class="panel">
-    <h2>③ 漏打時段</h2>
+  <section class="card" id="step3">
+    <h2><span class="step-no">3</span>漏打時段</h2>
     <div class="row">
       <p id="summary" class="summary"></p>
-      <button id="exportXlsx" type="button" hidden>匯出 Excel</button>
+      <button id="exportXlsx" type="button" class="btn primary" hidden>匯出 Excel</button>
     </div>
     <div id="gapList"></div>
     <details id="extraBox" class="extra-box">
@@ -83,10 +106,8 @@
   </section>
 </main>
 
-<footer>資料只在這個瀏覽器內處理，不會上傳。瀏覽器只記住排勤時段與班型。</footer>
-
-<script src="core.js?v=5"></script>
-<script src="xlsx.js?v=5"></script>
-<script src="app.js?v=5"></script>
+<script src="core.js?v=6"></script>
+<script src="xlsx.js?v=6"></script>
+<script src="app.js?v=6"></script>
 </body>
 </html>
